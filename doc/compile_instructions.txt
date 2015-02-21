@@ -1,0 +1,11 @@
+# edit install.rdf to indicate new version number
+# copy the 'project' folder to a new one called 'compile'
+# save appropriate form of chrome.manifest
+# open cmd and run the following 2 commands
+cd ~/cs/jam/extension/compile/chrome/jam-extension
+jar cvf jam-extension.jar *.*
+# move jam-extension.jar up one level
+# delete the 'jam-extension' folder (have to close cmd window first)
+# zip chrome, defaults, chrome.manifest, install.rdf into jam-extension.xpi
+# change HSAdmin/update.rdf to indicate the new version number
+# upload update.rdf and jam-extension.xpi to the web server

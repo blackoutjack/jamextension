@@ -1,0 +1,4 @@
+content jam-extension jar:chrome/jam-extension.jar!/content/
+locale jam-extension en-US jar:chrome/jam-extension.jar!/locale/en-US/
+skin jam-extension classic/1.0 jar:chrome/jam-extension.jar!/skin/
+overlay chrome://browser/content/browser.xul chrome://jam-extension/content/toolbar.xul

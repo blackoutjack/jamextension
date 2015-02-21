@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<RDF xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+	xmlns:em="http://www.mozilla.org/2004/em-rdf#">
+	<Description about="urn:mozilla:install-manifest">
+		<em:creator>Rich Joiner</em:creator>
+		<em:developer>Rich Joiner</em:developer>
+		<em:description>User-deployed JAMScript</em:description>
+		<em:homepageURL>https://policy-weaving.cs.wisc.edu/extension/</em:homepageURL>
+		<em:name>JAMScript Firefox Extension</em:name>
+		<em:version>0.1</em:version>
+		<em:id>{69103309-20A6-42CB-9B76-26D9595604FF}</em:id>
+		<em:file>
+			<Description about="urn:mozilla:extension:file:jam-extension.jar">
+				<em:package>content/</em:package>
+				<em:locale>locale/en-US/</em:locale>
+				<em:skin>skin/</em:skin>
+			</Description>
+		</em:file>
+		<em:targetApplication>
+			<Description>
+				<em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
+				<em:minVersion>17.0</em:minVersion>
+				<em:maxVersion>99.*</em:maxVersion>
+			</Description>
+		</em:targetApplication>
+		<em:updateURL>https://policy-weaving.cs.wisc.edu/jam-extension-update.rdf</em:updateURL>
+		<!-- em:optionsURL>chrome://dcbladmin/content/preferences.xul</em:optionsURL -->
+	</Description>
+</RDF>

@@ -1,0 +1,9 @@
+treechildren::-moz-tree-cell-text(archived)
+{
+	color: #909090;
+}
+
+treechildren::-moz-tree-cell-text(archived, selected)
+{
+	color: #c0c0c0;
+}
