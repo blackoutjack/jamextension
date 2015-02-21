@@ -24,7 +24,7 @@ mv $cmpdir/chrome/$jarname/$jarname.jar $cmpdir/chrome/
 rm -rf $cmpdir/chrome/$jarname
 # Zip chrome, chrome.manifest, install.rdf into hsadmin.xpi
 cd $cmpdir
-zip $jarname.xpi chrome/$jamname.jar chrome.manifest install.rdf
+zip $jarname.xpi chrome/$jarname.jar chrome.manifest install.rdf
 cd -
 
 # change $jarname-update.rdf to indicate the new version number

@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+<?xml-stylesheet href="chrome://jam-extension/skin/main.css" type="text/css"?>
+
+<page
+  id="pageedit"
+  title="Policy Editor"
+  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+  xmlns:html="http://www.w3.org/1999/xhtml"
+  orient="vertical"
+  onload="onLoad();"
+>
+<script type="application/x-javascript" src="chrome://jam-extension/content/common.js" />
+<script type="application/x-javascript" src="chrome://jam-extension/content/policyedit.js" />
+
+<tabbox id="thetabs">
+<tabs>
+	<tab label="Policy"/>
+	<tab label="Library" />
+</tabs>
+<tabpanels>
+	<tabpanel id="policytab">
+		<vbox flex="1">
+		  <textbox id="txtPolicy" width="500px" multiline="true" rows="40" disabled="true" />
+		</vbox>
+	</tabpanel>
+	<tabpanel id="librarytab">
+		<vbox>
+		  <textbox id="txtLibrary" width="500px" multiline="true" rows="40" disabled="true" />
+		</vbox>
+	</tabpanel>
+</tabpanels>
+</tabbox>
+<hbox>
+  <button label="Save" oncommand="onSave()" />
+  <button label="Close" oncommand="onClose()" />
+</hbox>
+
+
+</page>

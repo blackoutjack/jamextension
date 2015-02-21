@@ -8,7 +8,7 @@
 		<em:homepageURL>https://policy-weaving.cs.wisc.edu/extension/</em:homepageURL>
 		<em:name>JAMScript Firefox Extension</em:name>
 		<em:version>0.1</em:version>
-		<em:id>{69103309-20A6-42CB-9B76-26D9595604FF}</em:id>
+		<em:id>jam-extension@policy-weaving.cs.wisc.edu</em:id>
 		<em:file>
 			<Description about="urn:mozilla:extension:file:jam-extension.jar">
 				<em:package>content/</em:package>
