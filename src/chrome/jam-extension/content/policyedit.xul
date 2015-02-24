@@ -21,12 +21,12 @@
 <tabpanels>
 	<tabpanel id="policytab">
 		<vbox flex="1">
-		  <textbox id="txtPolicy" width="500px" multiline="true" rows="40" disabled="true" />
+		  <textbox id="txtPolicy" width="600px" multiline="true" rows="35" disabled="true" onchange="onChange()" />
 		</vbox>
 	</tabpanel>
 	<tabpanel id="librarytab">
 		<vbox>
-		  <textbox id="txtLibrary" width="500px" multiline="true" rows="40" disabled="true" />
+		  <textbox id="txtLibrary" width="600px" multiline="true" rows="35" disabled="true" onchange="onChange()" />
 		</vbox>
 	</tabpanel>
 </tabpanels>

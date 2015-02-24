@@ -5,48 +5,22 @@ Components.utils.import("resource://gre/modules/FileUtils.jsm");
 var _logger = Log4Moz.repository.getLogger("policyedit");
 _logger.level = Log4Moz.Level["All"];
 
-function setPolicy(data) {
-  var polfield = document.getElementById('txtPolicy');
+var needsSave = false;
+
+function initField(fieldId, data) {
+  var polfield = document.getElementById(fieldId);
   polfield.value = data;
   polfield.disabled = false;
 }
 
-function onLoad() {
-  let polpath = getLocalDirectory();
-  polpath.append("policy.js");
-  dump('policy: ' + polpath.path + '\n');
-  _logger.info('Loading policy: ' + polpath.path);
-  
-  if (polpath.exists()) {
-    NetUtil.asyncFetch(polpath, function(inputStream, status) {
-      if (!Components.isSuccessCode(status)) {
-        // Handle error!
-        _logger.error('Unable to open policy file: ' + polpath.path);
-        return;
-      }
-
-      // The file data is contained within inputStream.
-      // You can read it into a string with
-      var data = NetUtil.readInputStreamToString(inputStream, inputStream.available());
-      setPolicy(data);
-    });
-  } else {
-    setPolicy('');
-  }
-}
-
-function onSave() {
-  let polpath = getLocalDirectory();
-  polpath.append("policy.js");
-  dump('policy: ' + polpath.path + '\n');
-  _logger.info('Saving policy: ' + polpath.path);
-  
-  // file is nsIFile, data is a string
-  var data = document.getElementById('txtPolicy').value; 
+function saveFile(filename, data) {
+  let path = getLocalDirectory();
+  path.append(filename);
+  _logger.info('Saving file ' + path.path);
 
   // You can also optionally pass a flags parameter here. It defaults to
   // FileUtils.MODE_WRONLY | FileUtils.MODE_CREATE | FileUtils.MODE_TRUNCATE;
-  var ostream = FileUtils.openSafeFileOutputStream(polpath);
+  var ostream = FileUtils.openSafeFileOutputStream(path);
 
   var converter = Components.classes["@mozilla.org/intl/scriptableunicodeconverter"].createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
   converter.charset = "UTF-8";
@@ -56,15 +30,60 @@ function onSave() {
   NetUtil.asyncCopy(istream, ostream, function(status) {
     if (!Components.isSuccessCode(status)) {
       // Handle error!
-      _logger.error('Unable to save policy file: ' + polpath.path);
+      _logger.error('Unable to save file: ' + path.path);
       return;
     }
 
     // Data has been written to the file.
+    needsSave = false;
   });
 }
 
+function loadFile(filename, fieldId) {
+  let path = getLocalDirectory();
+  path.append(filename);
+  _logger.info('Loading file ' + path.path);
+  
+  if (path.exists()) {
+    NetUtil.asyncFetch(path, function(inputStream, status) {
+      if (!Components.isSuccessCode(status)) {
+        // Handle error!
+        _logger.error('Unable to open policy file: ' + path.path);
+        return;
+      }
+
+      // The file data is contained within inputStream.
+      // You can read it into a string with
+      var data = NetUtil.readInputStreamToString(inputStream, inputStream.available());
+      initField(fieldId, data);
+    });
+  } else {
+    initField(fieldId, '');
+  }
+}
+
+function onChange() {
+  needsSave = true;
+}
+
+function onLoad() {
+  loadFile('policy.js', 'txtPolicy');
+  loadFile('libTx.js', 'txtLibrary');
+}
+
+function onSave() {
+  var poldata = document.getElementById('txtPolicy').value; 
+  saveFile('policy.js', poldata);
+
+  var libdata = document.getElementById('txtLibrary').value; 
+  saveFile('libTx.js', libdata);
+}
+
 function onClose() {
-  window.close();
+  var ok = true;
+  if (needsSave) {
+    ok = window.confirm('Data has not been saved, really close?');
+  }
+  if (ok) window.close();
 }
 

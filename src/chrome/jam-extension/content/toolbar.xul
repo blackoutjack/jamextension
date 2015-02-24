@@ -24,7 +24,7 @@ function showDialog(xul) {
 
 		<toolbaritem flex="0">
 			<toolbarbutton id="btnPolicy" tooltiptext="Edit policy code." label="Policy" oncommand="doPolicy()" />		
-			<checkbox id="btnOnOff" tooltiptext="Turn JAMScript on/off." label="Enabled" oncommand="doToggle()" />
+			<checkbox id="chkOnOff" tooltiptext="Turn JAMScript on/off." label="Enabled" oncommand="doToggle()" />
 		</toolbaritem>
 	</toolbar>
 </toolbox>

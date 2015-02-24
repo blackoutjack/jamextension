@@ -1,0 +1,19 @@
+
+XUL administration
+https://developer.mozilla.org/en-US/Add-ons/Install_Manifests
+https://developer.mozilla.org/en-US/docs/Mozilla/JavaScript_code_modules/Using
+https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XUL/Tutorial/The_Chrome_URL
+
+APIs
+https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/nsIWebProgressListener
+https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/nsIFile
+https://developer.mozilla.org/en-US/docs/Mozilla/JavaScript_code_modules/NetUtil.jsm
+https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/nsIURI
+https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/nsIDOMWindow
+
+Tasks
+https://developer.mozilla.org/en-US/Add-ons/Overlay_Extensions/XUL_School/Local_Storage
+https://developer.mozilla.org/en-US/Add-ons/Overlay_Extensions/XUL_School/Intercepting_Page_Loads
+https://developer.mozilla.org/en-US/Add-ons/Code_snippets/File_I_O
+https://developer.mozilla.org/en-US/docs/Working_with_windows_in_chrome_code
+https://developer.mozilla.org/en-US/Add-ons/Overlay_Extensions/XUL_School/Appendix_D:_Loading_Scripts
