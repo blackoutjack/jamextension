@@ -20,8 +20,6 @@ root.addAppender(appender);
 var logger = Log4Moz.repository.getLogger("common");
 logger.level = Log4Moz.Level["All"];
 
-var enabled = false;
-
 var wpl = Components.interfaces.nsIWebProgressListener;
 var wplFlags = { //nsIWebProgressListener state transition flags
     STATE_START: wpl.STATE_START,
@@ -77,117 +75,7 @@ function loadFromFile(filename, obj, propId) {
 }
 
 var jaminfo = {
-  policy: undefined,
-  library: undefined,
-  // %%% Hard-coded for now
-  introspector: 'JAM.policy.pFull',
-}
-
-function insertScripts(doc) {
-  var head = doc.head;
-  if (head) {
-    var pol = undefined;
-    if (jaminfo.policy !== null) {
-      if (jaminfo.policy === undefined) {
-        // %%% Should wait if undefined!
-        logger.warn('Policy not loaded!');
-      } else {
-        pol = doc.createElement('script');
-        pol.type = 'text/javascript';
-        pol.textContent = jaminfo.policy;
-      }
-    }
-
-    var lib = undefined
-    if (jaminfo.library !== null) {
-      if (jaminfo.library === undefined) {
-        // %%% Should wait if undefined!
-        logger.warn('Library not loaded!');
-      } else {
-        lib = doc.createElement('script');
-        lib.type = 'text/javascript';
-        lib.textContent = jaminfo.library;
-      }
-    }
-
-    var ispect = undefined;
-    if (jaminfo.introspector !== null) {
-      if (jaminfo.introspector === undefined) {
-        // %%% Should wait if undefined!
-        logger.warn('Introspector not loaded!');
-      } else {
-        var itxt = 'JAM.setDynamicIntrospector(' + jaminfo.introspector + ');';
-        ispect = doc.createElement('script');
-        ispect.type = 'text/javascript';
-        ispect.textContent = itxt;
-      }
-    }
-    
-    logger.info('HEAD BEFORE: ' + head.innerHTML);
-    var scripts = head.getElementsByTagName('script');
-    if (scripts.length > 0) {
-      var first = scripts[0];
-      if (pol !== undefined)
-        head.insertBefore(pol, first);
-      if (lib !== undefined)
-        head.insertBefore(lib, first);
-      if (ispect !== undefined)
-        head.insertBefore(ispect, first);
-    } else {
-      if (pol !== undefined)
-        head.appendChild(pol);
-      if (lib !== undefined)
-        head.appendChild(lib);
-      if (ispect !== undefined)
-        head.appendChild(ispect);
-    }
-
-    logger.info('HEAD AFTER: ' + head.innerHTML);
-  } else {
-    logger.warn('No head available');
-  }
-}
-
-function writeScripts(doc) {
-  var pol = undefined;
-  if (jaminfo.policy !== null) {
-    if (jaminfo.policy === undefined) {
-      // %%% Should wait if undefined!
-      logger.warn('Policy not loaded!');
-    } else {
-      pol = doc.createElement('script');
-      pol.type = 'text/javascript';
-      pol.textContent = jaminfo.policy;
-      doc.write(pol.outerHTML);
-    }
-  }
-
-  var lib = undefined
-  if (jaminfo.library !== null) {
-    if (jaminfo.library === undefined) {
-      // %%% Should wait if undefined!
-      logger.warn('Library not loaded!');
-    } else {
-      lib = doc.createElement('script');
-      lib.type = 'text/javascript';
-      lib.textContent = jaminfo.library;
-      doc.write(lib.outerHTML);
-    }
-  }
-
-  var ispect = undefined;
-  if (jaminfo.introspector !== null) {
-    if (jaminfo.introspector === undefined) {
-      // %%% Should wait if undefined!
-      logger.warn('Introspector not loaded!');
-    } else {
-      var itxt = 'alert("goober");JAM.setDynamicIntrospector(' + jaminfo.introspector + ');';
-      ispect = doc.createElement('script');
-      ispect.type = 'text/javascript';
-      ispect.textContent = itxt;
-      doc.write(ispect.outerHTML);
-    }
-  }
+  policies: {},
 }
 
 var myListener = {
@@ -201,9 +89,14 @@ var myListener = {
       if ((aFlag & wpl.STATE_TRANSFERRING) && (aFlag & wpl.STATE_IS_REQUEST) && (aFlag & wpl.STATE_IS_DOCUMENT)) {
         // iframes are transitively handled by other mechanisms.
         if (win && win === win.top) {
-          Services.scriptloader.loadSubScript('chrome://jam-extension/content/policy.js', win, 'UTF-8');
+          for (var polid in jaminfo.policies) {
+            if (jaminfo.policies[polid] === true) {
+              var polfile = 'policy-' + polid + '.js';
+              Services.scriptloader.loadSubScript('chrome://jam-extension/content/' + polfile, win, 'UTF-8');
+            }
+          }
           Services.scriptloader.loadSubScript('chrome://jam-extension/content/libTx.js', win, 'UTF-8');
-          logger.info("LOADUNED");
+          logger.info("LOADED");
         } else {
           logger.warn('No window available');
         }
@@ -296,14 +189,6 @@ function plaintextencode(val) {
     return val;
 }
 
-function doPolicy() {
-  jaminfo.policy = undefined;
-  jaminfo.library = undefined;
-	showDialog('policyedit.xul');
-  loadFromFile('policy.js', jaminfo, 'policy');
-  loadFromFile('libTx.js', jaminfo, 'library');
-}
-
 function browserListen(browser) {
   browser.webProgress.addProgressListener(myListener, browser.webProgress.NOTIFY_ALL);
 }
@@ -322,29 +207,46 @@ function tabForget(browser) {
   browserForget(browser);
 }
 
-function doToggle() {
-  var chk = document.getElementById('chkOnOff');
+function doToggle(eltid) {
+  var chk = document.getElementById('chk' + eltid);
   var val = chk.checked;
-  if (val) {
-    enabled = true;
-    //gBrowser.addProgressListener(myListener);
-    gBrowser.browsers.forEach(function (browser) {
-      browserListen(browser);
-    });
-    if (jaminfo.policy === undefined) {
-      loadFromFile('policy.js', jaminfo, 'policy');
+
+  // See if there are any policies enabled initially.
+  var presome = false;
+  for (var polid in jaminfo.policies) {
+    if (jaminfo.policies[polid] === true) {
+      presome = true;
+      break;
     }
-    if (jaminfo.library === undefined) {
-      loadFromFile('libTx.js', jaminfo, 'library');
-    }
-  } else {
-    enabled = false;
-    //gBrowser.removeProgressListener(myListener);
-    gBrowser.browsers.forEach(function (browser) {
-      browserForget(browser);
-    });
   }
-  logger.info('Toggled: ' + val);
+
+  // Track if there are any policies enabled still.
+  var postsome = false;
+  if (val) {
+    jaminfo.policies[eltid] = true;
+    postsome = true;
+  } else {
+    jaminfo.policies[eltid] = false;
+    for (var polid in jaminfo.policies) {
+      if (jaminfo.policies[polid] === true) {
+        postsome = true;
+        break;
+      }
+    }
+  }
+
+  if (presome !== postsome) {
+    if (postsome) {
+      gBrowser.browsers.forEach(function (browser) {
+        browserListen(browser);
+      });
+    } else {
+      gBrowser.browsers.forEach(function (browser) {
+        browserForget(browser);
+      });
+    }
+  }
+  //logger.info('Toggled: ' + val);
 }
 gBrowser.tabContainer.addEventListener("TabOpen", tabListen, false);
 gBrowser.tabContainer.addEventListener("TabClose", tabForget, false);

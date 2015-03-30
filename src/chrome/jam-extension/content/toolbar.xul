@@ -23,8 +23,10 @@ function showDialog(xul) {
 		<image src="chrome://jam-extension/content/images/logo.gif" width="24" height="24" />
 
 		<toolbaritem flex="0">
-			<toolbarbutton id="btnPolicy" tooltiptext="Edit policy code." label="Policy" oncommand="doPolicy()" />		
-			<checkbox id="chkOnOff" tooltiptext="Turn JAMScript on/off." label="Enabled" oncommand="doToggle()" />
+			<checkbox id="chkxhr" tooltiptext="Prevent the use of XMLHttpRequest" label="Disallow XHR" oncommand="doToggle('xhr')" />
+			<checkbox id="chknet" tooltiptext="Prevent all network communication through JavaScript" label="Disallow JS network communication" oncommand="doToggle('net')" />
+			<checkbox id="chkpopup" tooltiptext="Prevent the creation of pop-up windows" label="Disallow pop-ups" oncommand="doToggle('popup')" />
+			<checkbox id="chkrefresh" tooltiptext="Prevent automatic refresh" label="Disallow autorefresh" oncommand="doToggle('refresh')" />
 		</toolbaritem>
 	</toolbar>
 </toolbox>
