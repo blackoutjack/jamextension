@@ -7,7 +7,7 @@
 		<em:description>User-driven JAMScript</em:description>
 		<em:homepageURL>https://policy-weaving.cs.wisc.edu/extension/</em:homepageURL>
 		<em:name>JAMScript Firefox Extension</em:name>
-		<em:version>1.0</em:version>
+		<em:version>1.0.1</em:version>
 		<em:id>jam-extension@policy-weaving.cs.wisc.edu</em:id>
 		<em:targetApplication>
 			<RDF:Description>

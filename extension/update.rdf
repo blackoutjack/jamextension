@@ -27,6 +27,20 @@
             </em:targetApplication>
           </RDF:Description>
         </RDF:li>
+        <RDF:li>
+          <RDF:Description>
+            <em:version>1.0.1</em:version>
+            <em:targetApplication>
+              <RDF:Description>
+                <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
+                <em:minVersion>31.4.*</em:minVersion>
+                <em:maxVersion>31.4.*</em:maxVersion>
+                <em:updateLink>https://policy-weaving.cs.wisc.edu/extension/jam-extension1.0.1.xpi</em:updateLink>
+                <em:updateInfoURL>https://policy-weaving.cs.wisc.edu/extension/</em:updateInfoURL>
+              </RDF:Description>
+            </em:targetApplication>
+          </RDF:Description>
+        </RDF:li>
         <!--
         <RDF:li>
           <RDF:Description>
@@ -34,8 +48,8 @@
             <em:targetApplication>
               <RDF:Description>
                 <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
-                <em:minVersion>17.0</em:minVersion>
-                <em:maxVersion>99.*</em:maxVersion>
+                <em:minVersion>31.4.*</em:minVersion>
+                <em:maxVersion>31.4.*</em:maxVersion>
                 <em:updateLink>https://policy-weaving.cs.wisc.edu/extension/jam-extension2.0.xpi</em:updateLink>
                 <em:updateInfoURL>https://policy-weaving.cs.wisc.edu/extension/</em:updateInfoURL>
               </RDF:Description>
