@@ -6,7 +6,6 @@
 		<em:developer>Rich Joiner</em:developer>
 		<em:description>User-driven JAMScript</em:description>
 		<em:homepageURL>https://policy-weaving.cs.wisc.edu/extension/</em:homepageURL>
-		<em:updateURL>https://policy-weaving.cs.wisc.edu/extension/update.rdf</em:homepageURL>
 		<em:name>JAMScript Firefox Extension</em:name>
 		<em:version>1.0</em:version>
 		<em:id>jam-extension@policy-weaving.cs.wisc.edu</em:id>
