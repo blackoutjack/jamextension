@@ -1,0 +1,18 @@
+The following enables testing the extension while in development (so
+that changes to the source code take effect upon restarting the browser,
+without having to recompile and reinstall the add-on). Assume $ROOT to
+be the root of this repository.
+
+1. Install the add-on in Firefox in the normal way from a .xpi file, and
+  close Firefox.
+2. Find the installed add-on in the Mozilla files, typically in the
+  following path, where [profile] indicates your user's profile id.
+  ~/.mozilla/firefox/[profile]/extensions/jam-extension@policy-weaving.cs.wisc.edu.xpi
+3. Delete the installed .xpi file identified in the previous step.
+4. In the file $ROOT/doc/jam-extension@policy-weaving.cs.wisc.edu, enter
+  the absolute path of the $ROOT/src/ directory. (The path should be the
+  only text in the file.)
+5. Copy this file to the Mozilla extensions directory (the contained the
+  installed compiled extension that was deleted in step 3).
+6. When you open Firefox next, it will execute the extension directly
+  from the source code.
