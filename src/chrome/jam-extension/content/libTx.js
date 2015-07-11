@@ -2,7 +2,7 @@
 // tag in the HTML page, and then this file, followed by all others.
 
 const PERFORMANCE_TESTING = false;
-const DEFAULT_ALLOW = false;
+const DEFAULT_ALLOW = true;
 const MIMIC = false;
 
 // Allow testing scripts with |alert| in the JS shell.
@@ -30,11 +30,12 @@ if (typeof policy !== "object") {
 
 // Define the JAM property to be read-only.
 Object.defineProperty(this, 'JAM', { 'value': (function() {
-
   var pFull = policy.pFull;
 
   // Close over some native values and objects that may be needed.
+  var _policy = policy;
   var _global = this;
+  delete _global.policy;
   var _undefined = undefined;
   var _eval = eval;
   var _Function = Function;
@@ -154,192 +155,17 @@ Object.defineProperty(this, 'JAM', { 'value': (function() {
     return frag.innerHTML;
   }
 
-  function commitSuspendFine(tx) {
-
-    // Get the cause of the suspend.
-    var sx = tx.getSuspendInfo();
-    if (!sx) return;
-
-    var type = sx.type;
-
-    var ret;
-    if (type === "write") {
-      // Get the receiver of the write.
-      var obj = sx.obj;
-      // Transaction suspensions caused by assignment to a property.
-      var value = sx.value;
-      ret = value;
-      // Get the property name that was accessed.
-      var id = sx.id;
-
-      if (_String_startsWith(id, "on")) {
-        // Wrap event handlers in transaction blocks.
-        var typ = typeof value;
-        if (JAM.isNativeFunction(value)) {
-          value = wrapFunction(pFull, value, obj);
-        } else if (typ === "string") {
-          value = "introspect(JAM.policy.pFull) { " + value + " }";
-        }
-      } else if (id === "outerHTML") {
-        // Writing to |outerHTML| replaces the node altogether, so the
-        // action is irrespective of the element type.
-        // %%% Can |outerHTML| be used like |document.write| to
-        // %%% incrementally create elements?
-        value = wrapHTMLEventScript(obj, value);
-      } else if (JAM.instanceof(obj, _HTMLScriptElement)) {
-        if (id === "textContent" || id === "innerHTML") {
-          value = "introspect(JAM.policy.pFull) { " + value + " };";
-        }
-      } else if (id === "innerHTML") {
-        // Dig down into other element types to find scripts.
-        value = wrapHTMLEventScript(obj, value);
-      }
-      obj[id] = value;
-
-      // Set the return value to the *original* value.
-      tx.setRetval(ret);
-
-    } else if (type === "call") {
-      // Transaction suspensions caused by call to a function.
-
-      // Get the receiver of the call.
-      var obj = sx.obj;
-      // Get the function that triggered the suspend.
-      var fun = sx.value;
-      // And the arguments.
-      var args = sx.args;
-      var len = sx.argc;
-
-      // Mark this false if special invocation is done in place.
-      var invoke = true;
-      if (len > 0) {
-        if (JAM.identical(fun, _Array_prototype_sort)) {
-          // Array.prototype.sort may invoke a user-provided
-          // comparison function.
-          if (JAM.isNativeFunction(args[0])) {
-            args[0] = wrapMethod(pFull, args[0]);
-          }
-        } else if (JAM.identical(fun, _setTimeout) || JAM.identical(fun, _setInterval)) {
-          if (JAM.isNativeFunction(args[0])) {
-            args[0] = wrapMethod(pFull, args[0]);
-          }
-        } else if (JAM.identical(fun, _Function)) {
-          // %%% What happens in non-string cases?
-          ret = _apply_apply(fun, [obj, args]);
-          if (typeof ret === "function") {
-            ret = wrapMethod(pFull, ret)
-          }
-          invoke = false;
-        } else if (JAM.identical(fun, _eval)) {
-          // Given that the callsite transformation will handle all
-          // direct calls to |eval|, we can assume this is indirect.
-          // %%% What about the modular case?
-
-          // Per MDN, SpiderMonkey no longer supports |eval| with
-          // more than 1 argument.
-          // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval
-          JAM.setDynamicIntrospector(pFull);
-          ret = _apply_apply(fun, [obj, args]);
-          JAM.setDynamicIntrospector();
-          invoke = false;
-        } else if (JAM.identical(fun, _HTMLDocument_prototype_write) || JAM.identical(fun, _HTMLDocument_prototype_writeln)) {
-          JAM.setDynamicIntrospector(pFull);
-          ret = _apply_apply(fun, [obj, args]);
-          JAM.setDynamicIntrospector();
-          invoke = false;
-        } else if (fun.name === "appendChild" || fun.name === "replaceChild" || fun.name === "insertBefore" || fun.name === "setAttribute" || fun.name === "setAttributeNode") {
-          // For |appendChild|, |replaceChild| and |insertBefore|,
-          // the first argument is the element to be inserted.
-          JAM.setDynamicIntrospector(pFull);
-          ret = _apply_apply(fun, [obj, args]);
-          JAM.setDynamicIntrospector();
-          invoke = false;
-        }
-        
-        if (len > 1) {
-          if (JAM.identical(fun, _String_prototype_replace)) {
-            // String.prototype.replace may invoke a user-provided
-            // replacement-generator function.
-            if (JAM.isNativeFunction(args[1])) {
-              args[1] = wrapMethod(pFull, args[1]);
-            }
-          } else if (fun.name === "addEventListener") {
-            // For |addEventListener|, the first argument is the type
-            // of event and the second (index 1) is the event handler.
-            // There may be optional further arguments.
-            // %%% What if the second argument is an |EventListener|
-            // %%% rather than a simple |Function|?
-            if (JAM.isNativeFunction(args[1])) {
-              args[1] = wrapMethod(pFull, args[1]);
-            }
-          } else if (fun.name === "removeEventListener" || JAM.identical(fun, _clearInterval)) {
-            // The second argument must specify the |Function| or
-            // |EventListener| to remove, so we need to maintain a
-            // mapping from the "original" functions to their
-            // wrapped version. The latter is the value to pass as
-            // second argument, if it exists in the mapping. If not,
-            // use the passed argument (which should cover the case
-            // in which the user retrieves the current event handler
-            // and requests that it be removed, as opposed to
-            // requesting that a reference to the original, unwrapped
-            // function value be removed.
-            // %%% Implement mapping described above.
-          } else if (JAM.identical(fun, ___defineGetter__) || JAM.identical(fun, ___defineSetter__)) {
-            // Wrap the native function in a comprehensive transaction.
-            if (JAM.isNativeFunction(args[1])) {
-              args[1] = wrapMethod(pFull, args[1]);
-            }
-          } else if (len > 2) {
-            if (JAM.identical(fun, _defineProperty)) {
-              // Wrap the getter/setter function in a comprehensive transaction.
-              var o = args[2];
-              if (JAM.isNativeFunction(o.set)) {
-                o.set = wrapMethod(pFull, o.set);
-              }
-              if (JAM.isNativeFunction(o.get)) {
-                o.get = wrapMethod(pFull, o.get);
-              }
-            }
-          }
-        }
-      }
-
-      if (invoke) ret = _apply_apply(fun, [obj, args]);
-
-      // Set the return value.
-      tx.setRetval(ret);
-    } else if (type === "new") {
-      var c = sx.value;
-      var args = sx.args;
-      var len = args.length;
-
-      if (len > 0) {
-        if (JAM.identical(c, _Function)) {
-            args[len-1] = "introspect(JAM.policy.pFull) {" + args[len-1] + "}";
-        }
-      }
-
-      ret = JAM.newApply(c, args);
-      tx.setRetval(ret);
-    } else if (type === "forin") {
-      // Transaction suspensions caused by entering a for-in loop.
-
-      // Do nothing, we just rely on the commit to sync the state
-      // of the transaction with the heap.
-    } else if (type === "read") {
-      // Get the receiver of the read.
-      var obj = sx.obj;
-      var id = sx.id;
-      // %%% May need to wrap a user-defined getter in a tx.
-      ret = obj[id];
-      tx.setRetval(ret);
-    } else {
-      // Other suspension types.
-      // %%% May need to handle these in the future.
-      alert("Unhandled suspend type: " + type);
+  // Invoke the given function in a context protected by a dynamic
+  // introspector. Use the |finally| block to disable dynamic
+  // introspection even if an exception occurs.
+  function invokeWithDynamicProtection(fun, obj, args) {
+    var di = JAM.getDynamicIntrospector();
+    JAM.setDynamicIntrospector(pFull);
+    try {
+      return _apply_apply(fun, [obj, args]);
+    } finally {
+      JAM.setDynamicIntrospector(di);
     }
-
-    return;
   }
 
   function commitSuspendCoarse(tx) {
@@ -407,8 +233,12 @@ Object.defineProperty(this, 'JAM', { 'value': (function() {
           // comparison function.
           args[0] = wrapMethod(pFull, args[0]);
         } else if (JAM.identical(fun, _setTimeout) || JAM.identical(fun, _setInterval)) {
-          // %%% Currently assumes args[0] is a function object
-          args[0] = wrapMethod(pFull, args[0]);
+          var typ = typeof args[0];
+          if (typ === "function") {
+            args[0] = wrapMethod(pFull, args[0]);
+          } else if (typ === "string") {
+            args[0] = "introspect(JAM.policy.pFull) { " + args[0] + " }";
+          }
         } else if (JAM.identical(fun, _Function)) {
           // %%% What happens in non-string cases?
           ret = _apply_apply(fun, [obj, args]);
@@ -424,25 +254,25 @@ Object.defineProperty(this, 'JAM', { 'value': (function() {
           // Per MDN, SpiderMonkey no longer supports |eval| with
           // more than 1 argument.
           // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval
-          JAM.setDynamicIntrospector(pFull);
-          ret = _apply_apply(fun, [obj, args]);
-          JAM.setDynamicIntrospector();
-          invoke = false;
+
+          var typ = typeof args[0];
+          if (typ === "object" || typ === "function") {
+            // Calling |eval| on these types just returns the value.
+            // Testing indicates there's no implicit function invocation
+            // of |toString| or |valueOf|.
+          } else {
+            args[0] = "introspect(JAM.policy.pFull) { " + args[0] + " }";
+          }
+
         } else if (JAM.identical(fun, _HTMLDocument_prototype_write) || JAM.identical(fun, _HTMLDocument_prototype_writeln)) {
-          JAM.setDynamicIntrospector(pFull);
-          ret = _apply_apply(fun, [obj, args]);
-          JAM.setDynamicIntrospector();
+          ret = invokeWithDynamicProtection(fun, obj, args);
           invoke = false;
-        } else if (fname === "appendChild" || fname === "replaceChild" || fname === "insertBefore" || fname === "setAttribute" || fname === "setAttributeNode") {
+        } else if (fname === "appendChild" || fname === "replaceChild" || fname === "insertBefore" || fname === "setAttributeNode") {
           // For |appendChild|, |replaceChild| and |insertBefore|,
           // the first argument is the element to be inserted.
-          JAM.setDynamicIntrospector(pFull);
-          ret = _apply_apply(fun, [obj, args]);
-          JAM.setDynamicIntrospector();
+          ret = invokeWithDynamicProtection(fun, obj, args);
           invoke = false;
-        }
-        
-        if (len > 1) {
+        } else if (len > 1) {
           if (JAM.identical(fun, _String_prototype_replace)) {
             // String.prototype.replace may invoke a user-provided
             // replacement-generator function.
@@ -471,6 +301,21 @@ Object.defineProperty(this, 'JAM', { 'value': (function() {
           } else if (JAM.identical(fun, ___defineGetter__) || JAM.identical(fun, ___defineSetter__)) {
             // Wrap the native function in a comprehensive transaction.
             args[1] = wrapMethod(pFull, args[1]);
+          } else if (fun.name === "setAttribute") {
+            if (args[0] === "src") {
+              if (JAM.instanceof(obj, _HTMLScriptElement)) {
+                ret = invokeWithDynamicProtection(fun, obj, args);
+                invoke = false;
+              }
+            } else if (_String_startsWith(args[0], "on")) {
+              // Wrap event handlers in transaction blocks.
+              var typ = typeof args[1];
+              if (typ === "function") {
+                args[1] = wrapFunction(pFull, args[1], obj);
+              } else if (typ === "string") {
+                args[1] = "introspect(JAM.policy.pFull) { " + args[1] + " }";
+              }
+            }
           } else if (len > 2) {
             if (JAM.identical(fun, _defineProperty)) {
               // Wrap the getter/setter function in a comprehensive transaction.
@@ -540,7 +385,7 @@ Object.defineProperty(this, 'JAM', { 'value': (function() {
   }
 
   return {
-    policy: policy,
+    policy: _policy,
 
     // Commandeer the native JAM utility functions.
     __proto__: JAM,
@@ -619,16 +464,16 @@ Object.defineProperty(this, 'JAM', { 'value': (function() {
 
       var ret;
       if (typeof ispect === "function") {
-        //if (MIMIC) {
+        if (MIMIC) {
           nodeTx.node = { type: "new", value: c, obj: null, args: args, argc: len };
           ispect(nodeTx);
           ret = nodeTx.ret;
           nodeTx.node = nodeTx.ret = _undefined;
-        //} else {
-        //  introspect(ispect) {
-        //    ret = JAM.newApply(c, args);
-        //  }
-        //}
+        } else {
+          introspect(ispect) {
+            ret = JAM.newApply(c, args);
+          }
+        }
       } else {
         ret = JAM.newApply(c, args);
       }
@@ -697,16 +542,20 @@ Object.defineProperty(this, 'JAM', { 'value': (function() {
             || JAM.identical(f, _setTimeout) || JAM.identical(f, _setInterval)) {
           // Only protect if a native function is being invoked, since
           // we assume all user-defined functions are instrumented.
-          // %%% What about string values?
-          if (JAM.isNativeFunction(args[0])) ispect = pFull;
+          if (JAM.isNativeFunction(args[0])) {
+            ispect = pFull;
+          } else if (typeof args[0] === "string") {
+            ispect = pFull;
+          }
         }
 
         if (len > 1) {
           if (JAM.identical(f, _String_prototype_replace)
               || JAM.identical(f, ___defineGetter__)
               || JAM.identical(f, ___defineSetter__)) {
-            // Array.prototype.sort may invoke a user-provided
-            // comparison function.
+            // String.prototype.replace may invoke a callback.
+            if (JAM.isNativeFunction(args[1])) ispect = pFull;
+          } else if (fname === "addEventListener") {
             if (JAM.isNativeFunction(args[1])) ispect = pFull;
           } else if (fname === "setAttribute" && JAM.instanceof(rec, Element)) {
             // We check |name| because each subclass of |Element|
@@ -748,16 +597,16 @@ Object.defineProperty(this, 'JAM', { 'value': (function() {
 
       var ret;
       if (typeof ispect === "function") {
-        //if (MIMIC) {
+        if (MIMIC) {
           nodeTx.node = { type: "call", value: f, obj: rec, args: args, argc: len };
           ispect(nodeTx);
           ret = nodeTx.ret;
           nodeTx.node = nodeTx.ret = _undefined;
-        //} else {
-        //  introspect(ispect) {
-        //    ret = _apply_apply(f, [rec, args]);
-        //  }
-        //}
+        } else {
+          introspect(ispect) {
+            ret = _apply_apply(f, [rec, args]);
+          }
+        }
       } else {
         ret = _apply_apply(f, [rec, args]);
       }
@@ -768,16 +617,16 @@ Object.defineProperty(this, 'JAM', { 'value': (function() {
       if (obj === null) obj = _global;
       var ret;
       if (ispect) {
-        //if (MIMIC) {
+        if (MIMIC) {
           nodeTx.node = { type: "read", id: memb, obj: obj };
           ispect(nodeTx);
           ret = nodeTx.ret;
           nodeTx.node = nodeTx.ret = _undefined;
-        //} else {
-        //  introspect(ispect) {
-        //    ret = obj[memb];
-        //  }
-        //}
+        } else {
+          introspect(ispect) {
+            ret = obj[memb];
+          }
+        }
       } else {
         ret = obj[memb];
       }
@@ -844,17 +693,17 @@ Object.defineProperty(this, 'JAM', { 'value': (function() {
       
       if (typeof ispect === "function") {
         var ret;
-        //if (MIMIC) {
+        if (MIMIC) {
           nodeTx.node = { type: "write", id: memb, value: val, obj: obj };
           ispect(nodeTx);
           ret = nodeTx.ret;
           nodeTx.node = nodeTx.ret = _undefined;
-        //} else {
+        } else {
           // %%% Seg. fault occurs when return is inside the transaction.
-        //  introspect(ispect) {
-        //    ret = obj[memb] = val;
-        //  }
-        //}
+          introspect(ispect) {
+            ret = obj[memb] = val;
+          }
+        }
         return ret;
       } else {
         obj[memb] = val;
@@ -939,9 +788,10 @@ Object.defineProperty(this, 'JAM', { 'value': (function() {
               args[0] = wrapMethod(pFull, args[0]);
             }
           } else if (JAM.identical(fun, _setTimeout) || JAM.identical(fun, _setInterval)) {
-            // %%% Currently assumes args[0] is a function object
             if (JAM.isNativeFunction(args[0])) {
               args[0] = wrapMethod(pFull, args[0]);
+            } else if (typeof args[0] === "string") {
+              args[0] = "introspect(JAM.policy.pFull) { " + args[0] + " }";
             }
           } else if (JAM.identical(fun, _Function)) {
             // %%% What happens in non-string cases?
@@ -958,25 +808,17 @@ Object.defineProperty(this, 'JAM', { 'value': (function() {
             // Per MDN, SpiderMonkey no longer supports |eval| with
             // more than 1 argument.
             // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval
-            JAM.setDynamicIntrospector(pFull);
-            ret = _apply_apply(fun, [obj, args]);
-            JAM.setDynamicIntrospector();
+            ret = invokeWithDynamicProtection(fun, obj, args);
             invoke = false;
           } else if (JAM.identical(fun, _HTMLDocument_prototype_write) || JAM.identical(fun, _HTMLDocument_prototype_writeln)) {
-            JAM.setDynamicIntrospector(pFull);
-            ret = _apply_apply(fun, [obj, args]);
-            JAM.setDynamicIntrospector();
+            ret = invokeWithDynamicProtection(fun, obj, args);
             invoke = false;
-          } else if (fname === "appendChild" || fname === "replaceChild" || fname === "insertBefore" || fname === "setAttribute" || fname === "setAttributeNode") {
+          } else if (fname === "appendChild" || fname === "replaceChild" || fname === "insertBefore" || fname === "setAttributeNode") {
             // For |appendChild|, |replaceChild| and |insertBefore|,
             // the first argument is the element to be inserted.
-            JAM.setDynamicIntrospector(pFull);
-            ret = _apply_apply(fun, [obj, args]);
-            JAM.setDynamicIntrospector();
+            ret = invokeWithDynamicProtection(fun, obj, args);
             invoke = false;
-          }
-          
-          if (len > 1) {
+          } else if (len > 1) {
             if (JAM.identical(fun, _String_prototype_replace)) {
               // String.prototype.replace may invoke a user-provided
               // replacement-generator function.
@@ -1008,6 +850,21 @@ Object.defineProperty(this, 'JAM', { 'value': (function() {
               // Wrap the native function in a comprehensive transaction.
               if (JAM.isNativeFunction(args[1])) {
                 args[1] = wrapMethod(pFull, args[1]);
+              }
+            } else if (fun.name === "setAttribute") {
+              if (args[0] === "src") {
+                if (JAM.instanceof(obj, _HTMLScriptElement)) {
+                  ret = invokeWithDynamicProtection(fun, obj, args);
+                  invoke = false;
+                }
+              } else if (_String_startsWith(args[0], "on")) {
+                // Wrap event handlers in transaction blocks.
+                var typ = typeof args[1];
+                if (typ === "function") {
+                  args[1] = wrapFunction(pFull, args[1], obj);
+                } else if (typ === "string") {
+                  args[1] = "introspect(JAM.policy.pFull) { " + args[1] + " }";
+                }
               }
             } else if (len > 2) {
               if (JAM.identical(fun, _defineProperty)) {
@@ -1062,7 +919,7 @@ Object.defineProperty(this, 'JAM', { 'value': (function() {
       return undefined;
     },
 
-    commitSuspend: policy.woven ? commitSuspendFine : commitSuspendCoarse,
+    commitSuspend: commitSuspendCoarse,
 
     // Additional methods useful for debugging.
     dump: function(obj, depth) {
@@ -1113,7 +970,4 @@ if (PERFORMANCE_TESTING) {
 
 Object.freeze(JAM);
 Object.freeze(JAM.policy);
-
-// Prevent access to the policy except within the JAM object.
-delete window.policy;
 JAM.setDynamicIntrospector(JAM.policy.pFull);

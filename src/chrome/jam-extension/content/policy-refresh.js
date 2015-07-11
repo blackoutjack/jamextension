@@ -4,13 +4,14 @@ var policy = function() {
   var _Location_prototype_assign = Location.prototype.assign;
   var _Window = Window;
   var _Location = Location;
+  var _HTMLFormElement_prototype_submit = HTMLFormElement.prototype.submit;
   function pFull(tx) {
     var commit = true;
     var as = tx.getActionSequence();
     var len = as.length;
     for (var i = 0;i < len;i++) {
       var node = as[i];
-      if ((node.type === "call" || node.type === "construct") && (JAM.identical(node.value, _Location_prototype_reload) || JAM.identical(node.value, _Location_prototype_replace) || JAM.identical(node.value, _Location_prototype_assign))) {
+      if ((node.type === "call" || node.type === "construct") && (JAM.identical(node.value, _Location_prototype_reload) || JAM.identical(node.value, _Location_prototype_replace) || JAM.identical(node.value, _Location_prototype_assign) || JAM.identical(node.value, _HTMLFormElement_prototype_submit))) {
         commit = false;
         break;
       }

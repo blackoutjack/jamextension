@@ -85,10 +85,14 @@ var myListener = {
       // If you use myListener for more than one tab/window, use
       // aWebProgress.DOMWindow to obtain the tab/window which triggers the state change
       var win = aWebProgress.DOMWindow;
-      logger.info('StateChange: aFlag=' + flagString(aFlag) + ', aRequest=' + aRequest.name + ', aStatus=' + aStatus + ' win: ' + win);
+      var aname = aRequest ? aRequest.name : aRequest;
+      logger.info('StateChange: aFlag=' + flagString(aFlag) + ', aRequest=' + aname + ', aStatus=' + aStatus + ' win: ' + win);
+      if (!isEnabled())
+        return;
       if ((aFlag & wpl.STATE_TRANSFERRING) && (aFlag & wpl.STATE_IS_REQUEST) && (aFlag & wpl.STATE_IS_DOCUMENT)) {
-        // iframes are transitively handled by other mechanisms.
-        if (win && win === win.top) {
+        // In UDJ, we don't transitively secure frames, but rather load
+        // the policy and library anew for each frame.
+        if (win /*&& win === win.top*/) {
           for (var polid in jaminfo.policies) {
             if (jaminfo.policies[polid] === true) {
               var polfile = 'policy-' + polid + '.js';
@@ -107,12 +111,14 @@ var myListener = {
       // This fires when the location bar changes; that is load event is confirmed
       // or when the user switches tabs. If you use myListener for more than one tab/window,
       // use aProgress.DOMWindow to obtain the tab/window which triggered the change.
-      logger.info('LocationChange: aFlag=' + flagString(aFlag) + ', aRequest=' + aRequest.name + ', aURI=' + aURI.spec);
+      var aname = aRequest ? aRequest.name : aRequest;
+      logger.info('LocationChange: aFlag=' + flagString(aFlag) + ', aRequest=' + aname + ', aURI=' + aURI.spec);
     },
 
     // For definitions of the remaining functions see related documentation
     onProgressChange: function(aWebProgress, aRequest, curSelf, maxSelf, curTot, maxTot) {
-      logger.info('ProgressChange: aRequest=' + aRequest.name + ', curSelf=' + curSelf + ', maxSelf=' + maxSelf + ', curTot=' + curTot + ', maxTot=' + maxTot);
+      var aname = aRequest ? aRequest.name : aRequest;
+      logger.info('ProgressChange: aRequest=' + aname + ', curSelf=' + curSelf + ', maxSelf=' + maxSelf + ', curTot=' + curTot + ', maxTot=' + maxTot);
       /*
       var win = aWebProgress.DOMWindow;
       // iframes are transitively handled by other mechanisms.
@@ -127,11 +133,13 @@ var myListener = {
     },
 
     onStatusChange: function(aWebProgress, aRequest, aStatus, aMessage) {
-      logger.info('StatusChange: aStatus=' + aStatus + ', aRequest=' + aRequest.name + ', aMessage=' + aMessage);
+      var aname = aRequest ? aRequest.name : aRequest;
+      logger.info('StatusChange: aStatus=' + aStatus + ', aRequest=' + aname + ', aMessage=' + aMessage);
     },
 
     onSecurityChange: function(aWebProgress, aRequest, aState) {
-      logger.info('SecurityChange: aRequest=' + aRequest.name + ', aState=' + aState);
+      var aname = aRequest ? aRequest.name : aRequest;
+      logger.info('SecurityChange: aRequest=' + aname + ', aState=' + aState);
     },
 
 }
@@ -198,13 +206,24 @@ function browserForget(browser) {
 }
 
 function tabListen(ev) {
-  var browser = ev.target;
+  var tab = ev.target;
+  var browser = gBrowser.getBrowserForTab(tab);
   browserListen(browser);
 }
 
 function tabForget(browser) {
-  var browser = ev.target;
+  var tab = ev.target;
+  var browser = gBrowser.getBrowserForTab(tab);
   browserForget(browser);
+}
+
+function isEnabled() {
+  for (var polid in jaminfo.policies) {
+    if (jaminfo.policies[polid] === true) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function doToggle(eltid) {
@@ -212,13 +231,7 @@ function doToggle(eltid) {
   var val = chk.checked;
 
   // See if there are any policies enabled initially.
-  var presome = false;
-  for (var polid in jaminfo.policies) {
-    if (jaminfo.policies[polid] === true) {
-      presome = true;
-      break;
-    }
-  }
+  var presome = isEnabled();
 
   // Track if there are any policies enabled still.
   var postsome = false;
@@ -227,12 +240,7 @@ function doToggle(eltid) {
     postsome = true;
   } else {
     jaminfo.policies[eltid] = false;
-    for (var polid in jaminfo.policies) {
-      if (jaminfo.policies[polid] === true) {
-        postsome = true;
-        break;
-      }
-    }
+    postsome = isEnabled();
   }
 
   if (presome !== postsome) {
@@ -246,7 +254,7 @@ function doToggle(eltid) {
       });
     }
   }
-  //logger.info('Toggled: ' + val);
+  logger.info('Toggled: ' + val);
 }
 gBrowser.tabContainer.addEventListener("TabOpen", tabListen, false);
 gBrowser.tabContainer.addEventListener("TabClose", tabForget, false);

@@ -29,7 +29,7 @@ var policy = function() {
     for (var i = 0;i < len;i++) {
       var node = as[i];
       if (node.type === "write" && (node.id === "src" && JAM.instanceof(node.obj, _HTMLElement) && __RegExp_prototype_test_call_bind__RegExp_prototype_test_(/^\s*(http|ftp)/i, node.value) || node.id === "action" && JAM.instanceof(node.obj, _HTMLFormElement) || node.id === "location" && JAM.instanceof(node.obj, _Window) || node.id === "cookie" && JAM.instanceof(node.obj, _HTMLDocument) || node.id === "href" && JAM.instanceof(node.obj, _HTMLElement) || node.id === "innerHTML" && JAM.instanceof(node.obj, 
-      _HTMLElement))) {
+      _HTMLElement) && __RegExp_prototype_test_call_bind__RegExp_prototype_test_(/^\s*(audio|frame|iframe|img|input|source|video)/i, node.value))) {
         commit = false;
         break;
       }
